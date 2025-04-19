@@ -2,56 +2,118 @@ import streamlit as st
 import datetime
 import json
 import os
+import hashlib
 
-# Kullanıcı ID'si (şimdilik manuel)
-user_id = st.text_input("Kullanıcı ID'nizi girin", "guest")
-data_path = f"data/{user_id}.json"
-os.makedirs("data", exist_ok=True)  # Klasör yoksa oluştur
+st.set_page_config(page_title="Reading Tracker App", page_icon="📚")
 
-# Kullanıcı verilerini yükle
+# File paths
+USERS_FILE = "users.json"
+DATA_DIR = "data"
+os.makedirs(DATA_DIR, exist_ok=True)
+
+# Password hashing
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+# Load and save user data
+def load_users():
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_users(users):
+    with open(USERS_FILE, "w") as f:
+        json.dump(users, f)
+
+def user_login():
+    st.sidebar.header("🔐 Login / Register")
+    tab = st.sidebar.radio("Choose an option:", ["Login", "Register"])
+    users = load_users()
+
+    if tab == "Register":
+        new_user = st.sidebar.text_input("New username")
+        new_pass = st.sidebar.text_input("Password", type="password")
+        if st.sidebar.button("Register"):
+            if new_user in users:
+                st.sidebar.warning("This username already exists.")
+            else:
+                users[new_user] = hash_password(new_pass)
+                save_users(users)
+                st.sidebar.success("Registration successful! You can now log in.")
+
+    if tab == "Login":
+        user = st.sidebar.text_input("Username")
+        pw = st.sidebar.text_input("Password", type="password")
+        if st.sidebar.button("Login"):
+            if user in users and users[user] == hash_password(pw):
+                st.session_state.user = user
+                st.sidebar.success(f"Welcome, {user}!")
+            else:
+                st.sidebar.error("Incorrect username or password.")
+
+if "user" not in st.session_state:
+    user_login()
+    st.stop()
+
+# Continue after login
+user_id = st.session_state.user
+data_path = f"{DATA_DIR}/{user_id}.json"
+
+# Load or initialize user data
 if os.path.exists(data_path):
     with open(data_path, "r") as f:
         user_data = json.load(f)
 else:
     user_data = {"log": {}}
 
-# Bugünün tarihi
-bugun = str(datetime.date.today())
-sayfa_sayisi = st.number_input("Bugün kaç sayfa okudun?", min_value=0, step=1)
+# Daily input
+today = str(datetime.date.today())
+pages_read = st.number_input("How many pages did you read today?", min_value=0, step=1)
 
-tamam = st.button("Kaydet")
-if tamam:
-    user_data["log"][bugun] = user_data["log"].get(bugun, 0) + sayfa_sayisi
+if st.button("Save"):
+    user_data["log"][today] = user_data["log"].get(today, 0) + pages_read
     with open(data_path, "w") as f:
         json.dump(user_data, f)
-    st.success(f"{bugun} günü için {sayfa_sayisi} sayfa eklendi!")
+    st.success(f"Added {pages_read} pages for {today}!")
 
-# Toplam sayfa hesaplama
-okuma_logu = user_data.get("log", {})
-toplam_sayfa = sum(okuma_logu.values())
+# Stats calculations
+reading_log = user_data.get("log", {})
+total_pages = sum(reading_log.values())
 
-days_active = len(okuma_logu)
-ortalama_gunluk = toplam_sayfa / days_active if days_active > 0 else 0
+days_active = len(reading_log)
+avg_daily = total_pages / days_active if days_active > 0 else 0
 
-tahmini_yillik = ortalama_gunluk * 365
-kitap_boyu = 300  # Ortalama kitap boyu
-kitap_yillik = tahmini_yillik / kitap_boyu
+yearly_estimate = avg_daily * 365
+average_book_length = 300
+books_per_year = yearly_estimate / average_book_length
 
-st.header("📊 Okuma İstatistiklerin")
-st.write(f"Toplam okuduğun sayfa: **{toplam_sayfa}**")
-st.write(f"Günlük ortalaman: **{ortalama_gunluk:.2f}** sayfa")
-st.write(f"Bu tempoyla yılda yaklaşık **{int(tahmini_yillik)}** sayfa, yani **{kitap_yillik:.1f}** kitap okursun.")
+st.header("📊 Your Reading Statistics")
+st.write(f"Total pages read: **{total_pages}**")
+st.write(f"Average pages per day: **{avg_daily:.2f}**")
+st.write(f"At this pace, you'll read **{int(yearly_estimate)}** pages or about **{books_per_year:.1f}** books per year.")
 
-# Dünya ortalaması kıyası
-# (örnek değer: dünya ortalaması yılda 12 kitap diyelim)
-dunya_ortalama_kitap = 12
-karsilastirma_orani = kitap_yillik / dunya_ortalama_kitap * 100
-st.write(f"Bu tempoyla dünya ortalamasından **%{karsilastirma_orani:.1f}** daha fazla okuyorsun!")
+# Global comparison
+comparison_data = {
+    "Average Person (Global)": 12,
+    "CEO Average": 60,
+    "Bill Gates": 50,
+    "UK Average": 15,
+    "India Average": 16,
+    "Finland Average": 16,
+    "France Average": 14,
+    "US Average": 17
+}
 
-# Motivasyon Mesajı
-if kitap_yillik >= 20:
-    st.success("Harika bir temposun var, bu şekilde devam edersen yılda 20'den fazla kitap bitirirsin!")
-elif kitap_yillik >= 10:
-    st.info("İyi gidiyorsun! Bu yıl en az 10 kitap bitireceksin gibi görünüyor.")
+for person, average in comparison_data.items():
+    if books_per_year > average:
+        st.success(f"You're on track to read more books per year than **{person}**!")
+
+# Motivational messages
+if books_per_year >= 20:
+    st.balloons()
+    st.success("You're doing amazing! If you keep it up, you'll finish more than 20 books a year!")
+elif books_per_year >= 10:
+    st.info("You're doing well! Looks like you'll read at least 10 books this year.")
 else:
-    st.warning("Şu an düşük bir tempo, ama her sayfa bir ilerlemedir. Hadi biraz daha! 💪")
+    st.warning("Your pace is a bit low, but every page counts. Keep going! 💪")
