@@ -6,6 +6,7 @@ import os
 # Kullanıcı ID'si (şimdilik manuel)
 user_id = st.text_input("Kullanıcı ID'nizi girin", "guest")
 data_path = f"data/{user_id}.json"
+os.makedirs("data", exist_ok=True)  # Klasör yoksa oluştur
 
 # Kullanıcı verilerini yükle
 if os.path.exists(data_path):
