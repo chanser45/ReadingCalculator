@@ -3,6 +3,8 @@ import datetime
 import json
 import os
 import hashlib
+import pandas as pd
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Reading Tracker App", page_icon="📚")
 
@@ -32,8 +34,8 @@ def user_login():
     users = load_users()
 
     if tab == "Register":
-        new_user = st.sidebar.text_input("New username")
-        new_pass = st.sidebar.text_input("Password", type="password")
+        new_user = st.sidebar.text_input("New username", key="reg_user")
+        new_pass = st.sidebar.text_input("Password", type="password", key="reg_pass")
         if st.sidebar.button("Register"):
             if new_user in users:
                 st.sidebar.warning("This username already exists.")
@@ -43,12 +45,12 @@ def user_login():
                 st.sidebar.success("Registration successful! You can now log in.")
 
     if tab == "Login":
-        user = st.sidebar.text_input("Username")
-        pw = st.sidebar.text_input("Password", type="password")
+        user = st.sidebar.text_input("Username", key="login_user")
+        pw = st.sidebar.text_input("Password", type="password", key="login_pass")
         if st.sidebar.button("Login"):
             if user in users and users[user] == hash_password(pw):
                 st.session_state.user = user
-                st.sidebar.success(f"Welcome, {user}!")
+                st.rerun()
             else:
                 st.sidebar.error("Incorrect username or password.")
 
@@ -117,3 +119,26 @@ elif books_per_year >= 10:
     st.info("You're doing well! Looks like you'll read at least 10 books this year.")
 else:
     st.warning("Your pace is a bit low, but every page counts. Keep going! 💪")
+
+# Visualization
+if reading_log:
+    st.subheader("📈 Your Reading Progress")
+    df = pd.DataFrame(list(reading_log.items()), columns=["Date", "Pages"])
+    df["Date"] = pd.to_datetime(df["Date"])
+    df = df.sort_values("Date")
+    df = df.set_index("Date")
+
+    st.line_chart(df)
+
+    st.subheader("📚 Where You Stand Compared to Others")
+    comp_df = pd.DataFrame({
+        "Reader Type": list(comparison_data.keys()) + [user_id],
+        "Books per Year": list(comparison_data.values()) + [books_per_year]
+    })
+    comp_df = comp_df.sort_values("Books per Year")
+
+    fig, ax = plt.subplots()
+    bars = ax.barh(comp_df["Reader Type"], comp_df["Books per Year"], color=["#1f77b4"] * len(comp_df))
+    bars[-1].set_color("orange")  # Highlight user
+    ax.set_xlabel("Books per Year")
+    st.pyplot(fig)
