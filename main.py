@@ -120,15 +120,19 @@ elif books_per_year >= 10:
 else:
     st.warning("Your pace is a bit low, but every page counts. Keep going! 💪")
 
-# Visualization
+# Visualization: Histogram of daily pages
 if reading_log:
-    st.subheader("📈 Your Reading Progress")
+    st.subheader("📊 Distribution of Pages Read per Day")
     df = pd.DataFrame(list(reading_log.items()), columns=["Date", "Pages"])
     df["Date"] = pd.to_datetime(df["Date"])
     df = df.sort_values("Date")
-    df = df.set_index("Date")
 
-    st.line_chart(df)
+    # Histogram
+    fig_hist, ax_hist = plt.subplots()
+    ax_hist.hist(df["Pages"], bins=10)
+    ax_hist.set_xlabel("Pages Read")
+    ax_hist.set_ylabel("Number of Days")
+    st.pyplot(fig_hist)
 
     st.subheader("📚 Where You Stand Compared to Others")
     comp_df = pd.DataFrame({
@@ -137,8 +141,8 @@ if reading_log:
     })
     comp_df = comp_df.sort_values("Books per Year")
 
-    fig, ax = plt.subplots()
-    bars = ax.barh(comp_df["Reader Type"], comp_df["Books per Year"], color=["#1f77b4"] * len(comp_df))
+    fig_bar, ax_bar = plt.subplots()
+    bars = ax_bar.barh(comp_df["Reader Type"], comp_df["Books per Year"])
     bars[-1].set_color("orange")  # Highlight user
-    ax.set_xlabel("Books per Year")
-    st.pyplot(fig)
+    ax_bar.set_xlabel("Books per Year")
+    st.pyplot(fig_bar)
