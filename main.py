@@ -14,6 +14,8 @@ if "log" not in st.session_state:
 # Predefine variables to avoid undefined reference
 fig_life = None
 fig_bar = None
+fig_goal = None
+persona = ""
 df = None
 
 # Daily input
@@ -53,6 +55,24 @@ st.write(f"Average pages per day: **{avg_daily_pages:.2f}**")
 st.write(f"Average minutes per day: **{avg_minutes:.2f} minutes**")
 st.write(f"At this pace, you'll read **{int(yearly_estimate_pages)}** pages or about **{books_per_year:.1f}** books per year.")
 
+# Reader Persona
+st.subheader("🧙‍♂️ Your Reader Persona")
+if avg_daily_pages < 5:
+    persona = "📖 Casual Reader – You enjoy a light read now and then. Every page is a small step forward!"
+elif avg_daily_pages < 15:
+    persona = "📚 Steady Explorer – Books are part of your life. Keep up the consistent pace!"
+elif avg_daily_pages < 30:
+    persona = "🚀 Page Devourer – You're truly making the most of your time!"
+else:
+    persona = "🌟 Literary Beast – You read more than most people ever dream to. Legend!"
+st.info(persona)
+
+# When will you finish your next book?
+st.subheader("⏳ Time to Finish a Book")
+if avg_daily_pages > 0:
+    days_to_finish = average_book_length / avg_daily_pages
+    st.write(f"At this pace, you'll finish a 300-page book in approximately **{days_to_finish:.1f}** days.")
+
 # Screen-time motivation
 pages_per_minute = total_pages / total_minutes if total_minutes > 0 else 0
 pages_in_30min = pages_per_minute * 30
@@ -74,32 +94,6 @@ if avg_daily_pages > 0:
     ax_life.set_xlabel("Years from Now")
     ax_life.set_ylabel("Books Read")
     st.pyplot(fig_life)
-
-# Trend charts
-if reading_log:
-    st.subheader("📈 Weekly and Monthly Reading Trends")
-    df = pd.DataFrame(
-        [(date, val["pages"]) for date, val in reading_log.items()],
-        columns=["Date", "Pages"]
-    )
-    df["Date"] = pd.to_datetime(df["Date"])
-    df = df.sort_values("Date")
-    df.set_index("Date", inplace=True)
-    df_weekly = df.resample("W").sum()
-    df_monthly = df.resample("M").sum()
-
-    fig_trend, ax_trend = plt.subplots()
-    df_weekly.plot(kind="bar", ax=ax_trend, legend=False, color="skyblue")
-    ax_trend.set_xticklabels([d.strftime('%b %Y') for d in df_weekly.index], rotation=45, ha='right')
-    ax_trend.set_title("Weekly Pages Read")
-    ax_trend.set_ylabel("Pages")
-    st.pyplot(fig_trend)
-
-    fig_monthly, ax_monthly = plt.subplots()
-    df_monthly.plot(kind="bar", ax=ax_monthly, legend=False, color="green")
-    ax_monthly.set_xticklabels([d.strftime('%b %Y') for d in df_monthly.index], rotation=45, ha='right')
-    ax_monthly.set_ylabel("Pages")
-    st.pyplot(fig_monthly)
 
 # Global comparison
 comparison_data = {
@@ -156,11 +150,7 @@ daily_commute_minutes = 30
 daily_commute_pages = pages_per_minute * daily_commute_minutes
 commute_books_yearly = (daily_commute_pages * 365) / average_book_length
 
-if commute_books_yearly > 0:
-    st.success(f"If you read during a daily 30-minute commute, you could finish **{commute_books_yearly:.1f}** extra books in a year! 📈")
-else:
-    st.info("Once you start tracking your reading time, we'll show you how much you could achieve during your commute. 🚍")
-
+st.success(f"If you read during a daily 30-minute commute, you could finish **{commute_books_yearly:.1f}** extra books in a year! 📈")
 
 # Social sharing image download
 st.subheader("📸 Share Your Progress")
@@ -187,18 +177,3 @@ if fig_bar:
         file_name="reading_comparison.png",
         mime="image/png"
     )
-
-# Trend insight (if enough data exists)
-if df is not None and len(df) >= 3:
-    this_week = df.last("7D").sum().values[0]
-    prev_week = df[df.index < (df.index.max() - pd.Timedelta(days=7))].last("7D").sum().values[0]
-
-    if prev_week > 0:
-        delta = this_week - prev_week
-        st.subheader("📈 Weekly Progress Insight")
-        if delta > 0:
-            st.success(f"You read {delta} more pages than the previous week! 🎉")
-        elif delta < 0:
-            st.warning(f"You read {abs(delta)} fewer pages than the week before. Try bouncing back! 💪")
-        else:
-            st.info("You're consistent with your last week. Keep going!")
