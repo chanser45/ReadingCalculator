@@ -90,13 +90,14 @@ if reading_log:
 
     fig_trend, ax_trend = plt.subplots()
     df_weekly.plot(kind="bar", ax=ax_trend, legend=False, color="skyblue")
+    ax_trend.set_xticklabels([d.strftime('%b %Y') for d in df_weekly.index], rotation=45, ha='right')
     ax_trend.set_title("Weekly Pages Read")
     ax_trend.set_ylabel("Pages")
     st.pyplot(fig_trend)
 
     fig_monthly, ax_monthly = plt.subplots()
     df_monthly.plot(kind="bar", ax=ax_monthly, legend=False, color="green")
-    ax_monthly.set_title("Monthly Pages Read")
+    ax_monthly.set_xticklabels([d.strftime('%b %Y') for d in df_monthly.index], rotation=45, ha='right')
     ax_monthly.set_ylabel("Pages")
     st.pyplot(fig_monthly)
 
@@ -155,7 +156,11 @@ daily_commute_minutes = 30
 daily_commute_pages = pages_per_minute * daily_commute_minutes
 commute_books_yearly = (daily_commute_pages * 365) / average_book_length
 
-st.success(f"If you read during a daily 30-minute commute, you could finish **{commute_books_yearly:.1f}** extra books in a year! 📈")
+if commute_books_yearly > 0:
+    st.success(f"If you read during a daily 30-minute commute, you could finish **{commute_books_yearly:.1f}** extra books in a year! 📈")
+else:
+    st.info("Once you start tracking your reading time, we'll show you how much you could achieve during your commute. 🚍")
+
 
 # Social sharing image download
 st.subheader("📸 Share Your Progress")
