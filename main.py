@@ -11,17 +11,22 @@ st.set_page_config(page_title="Reading Tracker App", page_icon="📚")
 if "log" not in st.session_state:
     st.session_state.log = {}
 
+# Predefine variables to avoid undefined reference
+fig_life = None
+fig_bar = None
+df = None
+
 # Daily input
 today = str(datetime.date.today())
 
 st.header("📘 Reading Session")
-pages_read = st.number_input("How many pages did you read today?", min_value=0, step=1)
-time_spent = st.number_input("How many minutes did you spend reading?", min_value=0, step=1)
+pages_read = st.number_input("How many pages did you read today?", min_value=0, step=1, format="%d")
+time_spent = st.number_input("How many minutes did you spend reading?", min_value=0, step=1, format="%d")
 
 if st.button("Save"):
     st.session_state.log[today] = {
-        "pages": st.session_state.log.get(today, {}).get("pages", 0) + pages_read,
-        "minutes": st.session_state.log.get(today, {}).get("minutes", 0) + time_spent,
+        "pages": pages_read,
+        "minutes": time_spent,
     }
     st.success(f"Saved: {pages_read} pages and {time_spent} minutes on {today}")
 
@@ -56,23 +61,43 @@ st.subheader("🍿 Compare to Watching TV")
 st.write(f"Instead of watching one 30-minute episode, you could read approximately **{pages_in_30min:.1f}** pages.")
 st.write(f"One hour of reading equals approximately **{pages_in_60min:.1f}** pages.")
 
-# Visualization: Histogram of daily pages
-fig_hist = None
+# Lifetime projection graph (1 to 50 years)
+if avg_daily_pages > 0:
+    st.subheader("📈 Lifetime Reading Projection")
+    years = list(range(1, 51))
+    projected_books = [(avg_daily_pages * 365 * y) / average_book_length for y in years]
+
+    fig_life, ax_life = plt.subplots()
+    ax_life.plot(years, projected_books, marker="o", color="blue")
+    ax_life.set_title("Estimated Total Books Read Over Time")
+    ax_life.set_xlabel("Years from Now")
+    ax_life.set_ylabel("Books Read")
+    st.pyplot(fig_life)
+
+# Trend charts
 if reading_log:
-    st.subheader("📊 Distribution of Pages Read per Day")
+    st.subheader("📈 Weekly and Monthly Reading Trends")
     df = pd.DataFrame(
         [(date, val["pages"]) for date, val in reading_log.items()],
         columns=["Date", "Pages"]
     )
     df["Date"] = pd.to_datetime(df["Date"])
     df = df.sort_values("Date")
+    df.set_index("Date", inplace=True)
+    df_weekly = df.resample("W").sum()
+    df_monthly = df.resample("M").sum()
 
-    # Histogram
-    fig_hist, ax_hist = plt.subplots()
-    ax_hist.hist(df["Pages"], bins=10)
-    ax_hist.set_xlabel("Pages Read")
-    ax_hist.set_ylabel("Number of Days")
-    st.pyplot(fig_hist)
+    fig_trend, ax_trend = plt.subplots()
+    df_weekly.plot(kind="bar", ax=ax_trend, legend=False, color="skyblue")
+    ax_trend.set_title("Weekly Pages Read")
+    ax_trend.set_ylabel("Pages")
+    st.pyplot(fig_trend)
+
+    fig_monthly, ax_monthly = plt.subplots()
+    df_monthly.plot(kind="bar", ax=ax_monthly, legend=False, color="green")
+    ax_monthly.set_title("Monthly Pages Read")
+    ax_monthly.set_ylabel("Pages")
+    st.pyplot(fig_monthly)
 
 # Global comparison
 comparison_data = {
@@ -80,22 +105,29 @@ comparison_data = {
     "CEO Average": 60,
     "Bill Gates": 50,
     "UK Average": 15,
-    "India Average": 16,
-    "Finland Average": 16,
+    "Turkey Average": 6,
     "France Average": 14,
     "US Average": 17
 }
 
 st.subheader("📚 Where You Stand Compared to Others")
 comp_df = pd.DataFrame({
-    "Reader Type": list(comparison_data.keys()) + ["You"],
-    "Books per Year": list(comparison_data.values()) + [books_per_year]
+    "Reader Type": list(comparison_data.keys()),
+    "Books per Year": list(comparison_data.values())
 })
-comp_df = comp_df.sort_values("Books per Year")
+
+# Add user to comparison and sort again
+comp_df.loc[len(comp_df)] = ["You", books_per_year]
+comp_df = comp_df.sort_values("Books per Year").reset_index(drop=True)
 
 fig_bar, ax_bar = plt.subplots()
 bars = ax_bar.barh(comp_df["Reader Type"], comp_df["Books per Year"])
-bars[-1].set_color("orange")  # Highlight user
+
+# Highlight the user's bar in orange
+for bar, label in zip(bars, comp_df["Reader Type"]):
+    if label == "You":
+        bar.set_color("orange")
+
 ax_bar.set_xlabel("Books per Year")
 st.pyplot(fig_bar)
 
@@ -108,6 +140,22 @@ elif books_per_year >= 10:
 else:
     st.warning("Your pace is a bit low, but every page counts. Keep going! 💪")
 
+# Personalized suggestions based on slight increases in effort
+st.subheader("🚀 Small Effort, Big Impact")
+extra_minutes = 15
+additional_pages = pages_per_minute * extra_minutes
+new_yearly_pages = (avg_daily_pages + additional_pages / 1) * 365
+new_books_per_year = new_yearly_pages / average_book_length
+
+st.info(f"If you read just **15 minutes more** each day, you'd read **{new_books_per_year:.1f}** books per year instead of **{books_per_year:.1f}**.")
+
+# Public transport simulation
+daily_commute_minutes = 30
+daily_commute_pages = pages_per_minute * daily_commute_minutes
+commute_books_yearly = (daily_commute_pages * 365) / average_book_length
+
+st.success(f"If you read during a daily 30-minute commute, you could finish **{commute_books_yearly:.1f}** extra books in a year! 📈")
+
 # Social sharing image download
 st.subheader("📸 Share Your Progress")
 def fig_to_image(fig):
@@ -116,12 +164,12 @@ def fig_to_image(fig):
     buf.seek(0)
     return buf
 
-if fig_hist:
-    img_buf = fig_to_image(fig_hist)
+if fig_life:
+    img_buf_life = fig_to_image(fig_life)
     st.download_button(
-        label="Download Histogram as Image",
-        data=img_buf,
-        file_name="reading_progress.png",
+        label="Download Lifetime Projection",
+        data=img_buf_life,
+        file_name="reading_lifetime_projection.png",
         mime="image/png"
     )
 
@@ -133,3 +181,18 @@ if fig_bar:
         file_name="reading_comparison.png",
         mime="image/png"
     )
+
+# Trend insight (if enough data exists)
+if df is not None and len(df) >= 3:
+    this_week = df.last("7D").sum().values[0]
+    prev_week = df[df.index < (df.index.max() - pd.Timedelta(days=7))].last("7D").sum().values[0]
+
+    if prev_week > 0:
+        delta = this_week - prev_week
+        st.subheader("📈 Weekly Progress Insight")
+        if delta > 0:
+            st.success(f"You read {delta} more pages than the previous week! 🎉")
+        elif delta < 0:
+            st.warning(f"You read {abs(delta)} fewer pages than the week before. Try bouncing back! 💪")
+        else:
+            st.info("You're consistent with your last week. Keep going!")
