@@ -24,6 +24,7 @@ pages_read = st.number_input("How many pages did you read today?", min_value=0, 
 time_spent = st.number_input("How many minutes did you spend reading?", min_value=0, step=1, format="%d")
 
 if st.button("Save"):
+    # Overwrite today's data completely instead of adding to it
     st.session_state.log[today] = {
         "pages": pages_read,
         "minutes": time_spent,
