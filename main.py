@@ -25,7 +25,7 @@ st.header("📘 Reading Session")
 pages_read = st.number_input("How many pages did you read today?", min_value=0, step=1, format="%d")
 time_spent = st.number_input("How many minutes did you spend reading?", min_value=0, step=1, format="%d")
 
-if st.button("Save"):
+if st.button("Calculate My Earnings"):
     # Overwrite today's data completely instead of adding to it
     st.session_state.log[today] = {
         "pages": pages_read,
@@ -51,22 +51,25 @@ books_per_year = yearly_estimate_pages / average_book_length
 st.header("📊 Your Reading Statistics")
 st.write(f"Total pages read: **{total_pages}**")
 st.write(f"Total minutes spent reading: **{total_minutes} minutes**")
-st.write(f"Average pages per day: **{avg_daily_pages:.2f}**")
-st.write(f"Average minutes per day: **{avg_minutes:.2f} minutes**")
-st.write(f"At this pace, you'll read **{int(yearly_estimate_pages)}** pages or about **{books_per_year:.1f}** books per year.")
-
+st.write("")
+st.success(f"At this pace, you'll read **{int(yearly_estimate_pages)}** pages or about **{books_per_year:.1f}** books per year.")
+st.info('“The man who moves a mountain begins by carrying away small stones." -Confucius')
+st.write("")
+st.write("")
+st.write("")
 # Reader Persona
 st.subheader("🧙‍♂️ Your Reader Persona")
-if avg_daily_pages < 5:
+if avg_daily_pages < 15:
     persona = "📖 Casual Reader – You enjoy a light read now and then. Every page is a small step forward!"
-elif avg_daily_pages < 15:
-    persona = "📚 Steady Explorer – Books are part of your life. Keep up the consistent pace!"
 elif avg_daily_pages < 30:
+    persona = "📚 Steady Explorer – Books are part of your life. Keep up the consistent pace!"
+elif avg_daily_pages < 50:
     persona = "🚀 Page Devourer – You're truly making the most of your time!"
 else:
     persona = "🌟 Literary Beast – You read more than most people ever dream to. Legend!"
 st.info(persona)
-
+st.write("")
+st.write("")
 # When will you finish your next book?
 st.subheader("⏳ Time to Finish a Book")
 if avg_daily_pages > 0:
@@ -77,15 +80,17 @@ if avg_daily_pages > 0:
 pages_per_minute = total_pages / total_minutes if total_minutes > 0 else 0
 pages_in_30min = pages_per_minute * 30
 pages_in_60min = pages_per_minute * 60
-
+st.write("")
+st.write("")
 st.subheader("🍿 Compare to Watching TV")
 st.write(f"Instead of watching one 30-minute episode, you could read approximately **{pages_in_30min:.1f}** pages.")
 st.write(f"One hour of reading equals approximately **{pages_in_60min:.1f}** pages.")
-
-# Lifetime projection graph (1 to 50 years)
+st.write("")
+st.write("")
+# Lifetime projection graph (1 to 40 years)
 if avg_daily_pages > 0:
     st.subheader("📈 Lifetime Reading Projection")
-    years = list(range(1, 51))
+    years = list(range(1, 41))
     projected_books = [(avg_daily_pages * 365 * y) / average_book_length for y in years]
 
     fig_life, ax_life = plt.subplots()
@@ -105,7 +110,8 @@ comparison_data = {
     "France Average": 14,
     "US Average": 17
 }
-
+st.write("")
+st.write("")
 st.subheader("📚 Where You Stand Compared to Others")
 comp_df = pd.DataFrame({
     "Reader Type": list(comparison_data.keys()),
@@ -128,22 +134,23 @@ ax_bar.set_xlabel("Books per Year")
 st.pyplot(fig_bar)
 
 # Motivational messages
-if books_per_year >= 20:
+if books_per_year >= 25:
     st.balloons()
     st.success("You're doing amazing! If you keep it up, you'll finish more than 20 books a year!")
-elif books_per_year >= 10:
+elif books_per_year >= 15:
     st.info("You're doing well! Looks like you'll read at least 10 books this year.")
 else:
     st.warning("Your pace is a bit low, but every page counts. Keep going! 💪")
 
 # Personalized suggestions based on slight increases in effort
 st.subheader("🚀 Small Effort, Big Impact")
-extra_minutes = 15
+extra_minutes = 10
 additional_pages = pages_per_minute * extra_minutes
 new_yearly_pages = (avg_daily_pages + additional_pages / 1) * 365
 new_books_per_year = new_yearly_pages / average_book_length
 
-st.info(f"If you read just **15 minutes more** each day, you'd read **{new_books_per_year:.1f}** books per year instead of **{books_per_year:.1f}**.")
+st.info(f"If you read just **10 minutes more** each day, you'd read **{new_books_per_year:.1f}** books per year instead of **{books_per_year:.1f}**.")
+st.info('"Victory belongs to those who can say little more."')
 
 # Public transport simulation
 daily_commute_minutes = 30
